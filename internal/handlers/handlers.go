@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/tsawler/bookings-app/internal/config"
+	"github.com/tsawler/bookings-app/internal/forms"
 	"github.com/tsawler/bookings-app/internal/models"
 	"github.com/tsawler/bookings-app/internal/render"
 )
@@ -56,7 +57,14 @@ func (m *Repository) About(w http.ResponseWriter, r *http.Request) {
 
 // Reservation renders the make a reservation page and displays form
 func (m *Repository) Reservation(w http.ResponseWriter, r *http.Request) {
-	render.RenderTemplate(w, r, "make-reservation.page.html", &models.TemplateData{})
+	render.RenderTemplate(w, r, "make-reservation.page.html", &models.TemplateData{
+		Form: forms.New(nil),
+	})
+}
+
+// PostReservation hadles the posting of a reservation post
+func (m *Repository) PostReservation(w http.ResponseWriter, r *http.Request) {
+
 }
 
 // Generals renders the room page
@@ -98,7 +106,7 @@ func (m *Repository) AvailabilityJSON(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 	}
-	
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(out)
 }
