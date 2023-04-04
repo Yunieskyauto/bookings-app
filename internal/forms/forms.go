@@ -3,6 +3,7 @@ package forms
 import (
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // Form it creates a custom form struct, embeds a url.Values object
@@ -19,6 +20,18 @@ func New(data url.Values) *Form {
 		errors(map[string][]string{}),
 	}
 }
+
+
+
+func (f *Form) Required(fields ...string) {
+	for _, field := range fields {
+		value := f.Get(field)
+		if strings.TrimSpace(value) == "" {
+			f.Errors.Add(field,"This field cannot be balnck")
+		}
+	}
+}
+
 
 // Has check if form field is in post and not empty
 func (f *Form) Has(field string, r *http.Request) bool {
