@@ -9,6 +9,7 @@ import (
 
 	"github.com/alexedwards/scs/v2"
 	"github.com/tsawler/bookings-app/internal/config"
+	"github.com/tsawler/bookings-app/internal/driver"
 	"github.com/tsawler/bookings-app/internal/handlers"
 	"github.com/tsawler/bookings-app/internal/models"
 	"github.com/tsawler/bookings-app/internal/render"
@@ -22,8 +23,10 @@ var session *scs.SessionManager
 // main is the main function
 func main() {
 
-    err := run()
-    if err != nil {
+	db, err := run()
+	defer db.SQL.Close()
+
+	if err != nil {
 		log.Fatal(err)
 	}
 
@@ -40,35 +43,42 @@ func main() {
 	}
 }
 
+func run() (*driver.DB, error) {
+	// what am I going to store in the session
+	gob.Register(models.Reservation{})
 
-func run() error {
-	   // what am I going to store in the session
-	   gob.Register(models.Reservation{})
+	// change this to true when in production
+	app.InProduction = false
 
-	   // change this to true when in production
-	   app.InProduction = false
-   
-	   // set up the session
-	   session = scs.New()
-	   session.Lifetime = 24 * time.Hour
-	   session.Cookie.Persist = true
-	   session.Cookie.SameSite = http.SameSiteLaxMode
-	   session.Cookie.Secure = app.InProduction
-   
-	   app.Session = session
-   
-	   tc, err := render.CreateTemplateCache()
-	   if err != nil {
-		   log.Fatal("cannot create template cache")
-		   return err
-	   }
-   
-	   app.TemplateCache = tc
-	   app.UseCache = false
-   
-	   repo := handlers.NewRepo(&app)
-	   handlers.NewHandlers(repo)
-   
-	   render.NewTemplates(&app)
-	return nil
+	// set up the session
+	session = scs.New()
+	session.Lifetime = 24 * time.Hour
+	session.Cookie.Persist = true
+	session.Cookie.SameSite = http.SameSiteLaxMode
+	session.Cookie.Secure = app.InProduction
+
+	app.Session = session
+
+	// Connect to database
+	log.Println("Connecting to database")
+	db, err := driver.ConnectSQL("host=localhost port=5432 dbname=bookings user=postgres password=freire16")
+	if err != nil {
+		log.Fatal("Cannot conect to database! Dying....")
+	}
+
+	log.Println("Connected to database")
+	tc, err := render.CreateTemplateCache()
+	if err != nil {
+		log.Fatal("cannot create template cache")
+		return nil, err
+	}
+
+	app.TemplateCache = tc
+	app.UseCache = false
+
+	repo := handlers.NewRepo(&app, db)
+	handlers.NewHandlers(repo)
+
+	render.NewTemplates(&app)
+	return db, nil
 }
